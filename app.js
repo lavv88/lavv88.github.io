@@ -84,19 +84,22 @@
   // capture a mirrored frame from the live video and return an Image
   function captureFrameMirrored(){
     return new Promise((resolve)=>{
-      const w = video.videoWidth || 640;
-      const h = video.videoHeight || 480;
+      // force captured frames to fixed 640x480 regardless of camera resolution
+      const FIX_W = 640;
+      const FIX_H = 480;
       const tmp = document.createElement('canvas');
-      tmp.width = w;
-      tmp.height = h;
+      tmp.width = FIX_W;
+      tmp.height = FIX_H;
       const tctx = tmp.getContext('2d');
-      // draw mirrored
+      // draw mirrored and scale to fixed size
       tctx.save();
-      tctx.translate(w, 0);
+      tctx.translate(FIX_W, 0);
       tctx.scale(-1, 1);
-      tctx.drawImage(video, 0, 0, w, h);
+      tctx.drawImage(video, 0, 0, video.videoWidth || FIX_W, video.videoHeight || FIX_H, 0, 0, FIX_W, FIX_H);
       tctx.restore();
       const img = new Image();
+      img.width = FIX_W;
+      img.height = FIX_H;
       img.onload = ()=>resolve(img);
       img.src = tmp.toDataURL('image/png');
     });
@@ -317,13 +320,16 @@
       const vid = (videoOne && currentMode === '1') ? videoOne : video;
       const vW = (vid && vid.videoWidth) ? vid.videoWidth : (onecutArea.clientWidth || WIDTH);
       const vH = (vid && vid.videoHeight) ? vid.videoHeight : (onecutArea.clientHeight || HEIGHT);
+      // create a fixed-size mirrored capture for the photo (force 640x480)
+      const FIX_W = 640;
+      const FIX_H = 480;
       const tmp = document.createElement('canvas');
-      tmp.width = vW;
-      tmp.height = vH;
+      tmp.width = FIX_W;
+      tmp.height = FIX_H;
       const tctx = tmp.getContext('2d');
       tctx.save();
-      tctx.translate(vW,0); tctx.scale(-1,1);
-      tctx.drawImage(vid,0,0,vW,vH);
+      tctx.translate(FIX_W,0); tctx.scale(-1,1);
+      tctx.drawImage(vid,0,0, vid.videoWidth || FIX_W, vid.videoHeight || FIX_H, 0, 0, FIX_W, FIX_H);
       tctx.restore();
 
       // draw the video into the final canvas at the hole position if available
