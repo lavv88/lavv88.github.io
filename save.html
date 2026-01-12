@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>촬영 결과 저장</title>
+  <style>
+    @font-face {
+      font-family: 'Cafe24SurroundAir';
+      src: url('https://gcore.jsdelivr.net/gh/projectnoonnu/noonfonts_2105_2@1.0/Cafe24SsurroundAir.woff') format('woff');
+      font-weight: normal;
+      font-display: swap;
+    }
+    body{font-family:'Cafe24SurroundAir', system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:0;padding:24px;display:flex;justify-content:center}
+    .wrap{max-width:1000px;width:100%;display:flex;flex-direction:column;align-items:center;gap:18px}
+    .final{max-width:640px;width:100%;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,0.12)}
+    .thumbs{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+    .thumb{width:140px;height:180px;object-fit:contain;border-radius:6px;background:#111}
+    .row{display:flex;gap:8px;align-items:center}
+    button{padding:8px 12px;border-radius:6px;border:0;background:#2d8cff;color:#fff;cursor:pointer;font-family:'Cafe24SurroundAir', system-ui,Segoe UI,Roboto,Helvetica,Arial}
+    a.download{padding:8px 12px;border-radius:6px;background:#222;color:#fff;text-decoration:none}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="row" style="width:100%;justify-content:center">
+      <img id="finalImg" class="final" alt="final" src=""/>
+    </div>
+    <div class="row">
+      <button id="downloadFinal">최종본 저장</button>
+      <button id="retake">다시 촬영</button>
+      <button id="goMain">메인으로</button>
+    </div>
+    <div class="thumbs" id="thumbs">
+      <!-- thumbnails inserted here -->
+    </div>
+  </div>
+
+  <script src="save.js"></script>
+</body>
+</html>

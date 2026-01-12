@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Lavv's Photo Studio - 1cut</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* 4cut 페이지와 완전히 동일한 스타일 */
+    :root{--center-width:520px}
+    @font-face {
+      font-family: 'Cafe24SurroundAir';
+      src: url('https://gcore.jsdelivr.net/gh/projectnoonnu/noonfonts_2105_2@1.0/Cafe24SsurroundAir.woff') format('woff');
+      font-weight: normal;
+      font-display: swap;
+    }
+    body{font-family:'Cafe24SurroundAir', system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:0;padding:20px;display:flex;justify-content:center}
+    button, input, select, textarea, a { font-family: 'Cafe24SurroundAir', system-ui,Segoe UI,Roboto,Helvetica,Arial; }
+    #countdown, canvas { font-family: 'Cafe24SurroundAir', system-ui,Segoe UI,Roboto,Helvetica,Arial; }
+    .layout{width:100%;max-width:1200px}
+    .layout{display:flex;flex-direction:column;align-items:center}
+    .left-col,.center-col,.right-col{width:100%}
+    .center-col{order:1;display:flex;flex-direction:column;align-items:center}
+    .left-col{order:2}
+    .right-col{order:3}
+    video{width:504px;max-width:140%;border-radius:6px;background:#000;transform:scaleX(-1)}
+    #countdown{font-size:60px;margin:10px;color:#000000}
+    #startBtn{padding:10px 16px;font-size:18px;margin-top:8px;background:#eee;color:#333;border-radius:6px;border:1px solid #bbb;opacity:1;transition:background 0.2s,color 0.2s,opacity 0.2s;}
+    #startBtn:disabled {
+      background: #eee;
+      color: #333;
+      opacity: 1;
+      filter: none;
+      cursor: not-allowed;
+    }
+    .rolls{display:flex;flex-direction:column;gap:12px;margin-top:16px}
+    .roll{width:480px;height:auto;background:#222;border-radius:6px;object-fit:cover}
+    #combined{width:480px;height:auto;background:#111;border-radius:6px;object-fit:contain}
+    @media (min-width: 900px){
+      .layout{display:grid;grid-template-columns:220px var(--center-width);gap:24px;align-items:start}
+      .left-col{display:flex;justify-content:flex-start;align-items:flex-start;padding-left:12px}
+      .right-col{display:flex;justify-content:flex-start}
+      .center-col{display:flex;flex-direction:column;align-items:center;justify-self:center;width:var(--center-width);margin:0 auto}
+      .roll{width:160px;display:block;margin-bottom:12px;border-radius:6px;object-fit:cover}
+      .rolls{display:flex;flex-direction:column;gap:12px}
+      #combined{width:320px}
+      video{width:728px;max-width:140%;display:block}
+      .center-col{overflow:visible}
+    }
+    #captureUI{background-image: url("assets/cam%20bg.jpg");background-size:cover;background-position:center}
+    #captureUI #countdown{position:absolute;top:18px;left:50%;transform:translateX(-50%);font-size:clamp(28px,6vw,72px);color:#000;background:transparent;padding:4px 8px;z-index:1000}
+    #captureUI #shotCounter{position:absolute;top:18px;left:18px;font-size:clamp(14px,2.4vw,18px);color:#000;background:rgba(255,255,255,0.8);padding:6px 8px;border-radius:6px;z-index:1001;font-family:'Cafe24SurroundAir', system-ui,Segoe UI,Roboto,Helvetica,Arial}
+    #startBtn{position:relative;z-index:1002;pointer-events:auto;margin-top:18px}
+    #captureUI.capture-center {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: none;
+      z-index: 900;
+      pointer-events: auto;
+      padding: 18px;
+    }
+    .capture-stack {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      width: 100%;
+    }
+    .counter-row {
+      display: flex;
+      flex-direction: row;
+      align-items: flex-end;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 4px;
+      width: 100%;
+    }
+    #shotCounter {
+      display: none;
+      position: absolute;
+      top: 0;
+      left: 0;
+      margin: 0;
+      font-size: clamp(14px,2.4vw,18px);
+      color: #000;
+      background: rgba(255,255,255,0.8);
+      padding: 6px 8px;
+      border-radius: 6px;
+      z-index: 1001;
+      font-family: 'Cafe24SurroundAir', system-ui,Segoe UI,Roboto,Helvetica,Arial;
+    }
+    #countdown {
+      font-size: clamp(28px,6vw,72px);
+      color: #000;
+      background: transparent;
+      padding: 4px 8px;
+      z-index: 1000;
+      font-family: 'Cafe24SurroundAir', system-ui,Segoe UI,Roboto,Helvetica,Arial;
+    }
+  </style>
+</head>
+<body style="width:100vw;height:100vh;margin:0;padding:0;overflow:hidden;">
+  <div class="layout">
+    <div class="left-col"></div>
+    <div class="center-col">
+      <div id="captureUI" class="capture-center" style="position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;z-index:900;pointer-events:auto;padding:18px;">
+        <div class="capture-stack">
+          <div class="counter-row" style="width:100%;position:relative;display:flex;align-items:flex-end;justify-content:center;">
+            <div id="countdown" style="position:absolute;left:50%;top:0;transform:translate(-50%,-85%);"></div>
+          </div>
+          <div class="video-wrap" style="position:relative;display:inline-block;">
+            <video id="video" autoplay playsinline style="display:block;max-width:92vw;max-height:72vh;border-radius:8px;transform:scaleX(-1)"></video>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;gap:0;">
+            <button id="startBtn" style="display:inline-block">시작 (4장 연속 촬영)</button>
+            <div id="rolls" style="margin-top:14px;display:flex;gap:12px;flex-direction:row;justify-content:center;align-items:center;">
+              <img id="roll1" class="roll" alt="roll1" src="" style="display:none;"/>
+              <img id="roll2" class="roll" alt="roll2" src="" style="display:none;"/>
+              <img id="roll3" class="roll" alt="roll3" src="" style="display:none;"/>
+              <img id="roll4" class="roll" alt="roll4" src="" style="display:none;"/>
+            </div>
+          </div>
+          <canvas id="canvas" style="display:none"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>

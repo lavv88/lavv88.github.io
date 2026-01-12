@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Lavv's Photo Studio</title>
+  <style>
+    :root{--center-width:520px}
+    @font-face {
+      font-family: 'Cafe24SurroundAir';
+      src: url('https://gcore.jsdelivr.net/gh/projectnoonnu/noonfonts_2105_2@1.0/Cafe24SsurroundAir.woff') format('woff');
+      font-weight: normal;
+      font-display: swap;
+    }
+    body{font-family:'Cafe24SurroundAir', system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:0;padding:20px;display:flex;justify-content:center}
+    /* ensure form controls and buttons use the site font */
+    button, input, select, textarea, a { font-family: 'Cafe24SurroundAir', system-ui,Segoe UI,Roboto,Helvetica,Arial; }
+    /* countdown and canvas text should also inherit the site font */
+    #countdown, canvas { font-family: 'Cafe24SurroundAir', system-ui,Segoe UI,Roboto,Helvetica,Arial; }
+    .layout{width:100%;max-width:1200px}
+    /* default mobile styles */
+    .layout{display:flex;flex-direction:column;align-items:center}
+    .left-col,.center-col,.right-col{width:100%}
+    /* mobile ordering: center (camera) first, then rolls, then combined */
+    .center-col{order:1;display:flex;flex-direction:column;align-items:center}
+    .left-col{order:2}
+    .right-col{order:3}
+    video{width:504px;max-width:140%;border-radius:6px;background:#000;transform:scaleX(-1)}
+    #countdown{font-size:60px;margin:10px;color:#000000}
+    #startBtn{padding:10px 16px;font-size:18px;margin-top:8px;background:#eee;color:#333;border-radius:6px;border:1px solid #bbb;opacity:1;transition:background 0.2s,color 0.2s,opacity 0.2s;}
+    #startBtn:disabled {
+      background: #eee;
+      color: #333;
+      opacity: 1;
+      filter: none;
+      cursor: not-allowed;
+    }
+    .rolls{display:flex;flex-direction:column;gap:12px;margin-top:16px}
+    .roll{width:480px;height:auto;background:#222;border-radius:6px;object-fit:cover}
+    #combined{width:480px;height:auto;background:#111;border-radius:6px;object-fit:contain}
+
+    /* Desktop layout */
+    @media (min-width: 900px){
+      .layout{display:grid;grid-template-columns:220px var(--center-width);gap:24px;align-items:start}
+      /* left column: rolls, align left and smaller width */
+        .left-col{display:flex;justify-content:flex-start;align-items:flex-start;padding-left:12px}
+      .right-col{display:flex;justify-content:flex-start}
+      /* ensure the center column is centered in the grid on desktop */
+      .center-col{display:flex;flex-direction:column;align-items:center;justify-self:center;width:var(--center-width);margin:0 auto}
+      .roll{width:160px;display:block;margin-bottom:12px;border-radius:6px;object-fit:cover}
+      .rolls{display:flex;flex-direction:column;gap:12px}
+      #combined{width:320px}
+      video{width:728px;max-width:140%;display:block}
+      /* prevent center video from overlapping neighbors */
+      .center-col{overflow:visible}
+    }
+    /* in-page roll previews (shown when in 4cut mode) */
+    /* capture UI background and countdown */
+    #captureUI{background-image: url("assets/cam%20bg.jpg");background-size:cover;background-position:center}
+    #captureUI #countdown{position:absolute;top:18px;left:50%;transform:translateX(-50%);font-size:clamp(28px,6vw,72px);color:#000;background:transparent;padding:4px 8px;z-index:1000}
+    #captureUI #shotCounter{position:absolute;top:18px;left:18px;font-size:clamp(14px,2.4vw,18px);color:#000;background:rgba(255,255,255,0.8);padding:6px 8px;border-radius:6px;z-index:1001;font-family:'Cafe24SurroundAir', system-ui,Segoe UI,Roboto,Helvetica,Arial}
+    /* ensure start button sits above the video/overlay and accepts clicks */
+    #startBtn{position:relative;z-index:1002;pointer-events:auto;margin-top:18px}
+    #captureUI.capture-center {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  z-index: 900;
+  pointer-events: auto;
+  padding: 18px;
+}
+.capture-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  width: 100%;
+}
+.counter-row {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 4px;
+  width: 100%;
+}
+#shotCounter {
+  display: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  margin: 0;
+  font-size: clamp(14px,2.4vw,18px);
+  color: #000;
+  background: rgba(255,255,255,0.8);
+  padding: 6px 8px;
+  border-radius: 6px;
+  z-index: 1001;
+  font-family: 'Cafe24SurroundAir', system-ui,Segoe UI,Roboto,Helvetica,Arial;
+}
+#countdown {
+  font-size: clamp(28px,6vw,72px);
+  color: #000;
+  background: transparent;
+  padding: 4px 8px;
+  z-index: 1000;
+  font-family: 'Cafe24SurroundAir', system-ui,Segoe UI,Roboto,Helvetica,Arial;
+}
+  </style>
+</head>
+  <body style="width:100vw;height:100vh;margin:0;padding:0;overflow:hidden;">
+  <div class="layout">
+    <div class="left-col"></div>
+
+    <div class="center-col">
+      <!-- Landing: centered title and mode buttons -->
+      <div id="landing" style="position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;padding:18px;pointer-events:auto;z-index:999">
+        <img id="landingLogo" src="assets/logo.png" alt="lavv's photo studio logo" style="display:block;max-width:70%;height:auto">
+        <h1 id="landingText" style="margin:0;font-size:clamp(20px, 6vw, 56px);line-height:1.05">lavv's photo studio</h1>
+        <div style="display:flex;gap:12px;margin-top:8px">
+          <button id="btn4cut" style="padding:10px 14px">4cut</button>
+        </div>
+      </div>
+
+      <!-- Capture UI (hidden until mode selected) - now fixed and centered -->
+      <div id="captureUI" class="capture-center" style="position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;z-index:900;pointer-events:auto;padding:18px;">
+        <div class="capture-stack">
+          <div class="counter-row" style="width:100%;position:relative;display:flex;align-items:flex-end;justify-content:center;">
+            <div id="countdown" style="position:absolute;left:50%;top:0;transform:translate(-50%,-85%);"></div>
+          </div>
+          <!-- 1cut 전용 카메라 영역: 675x800px, 4cut과 동일한 구조/기능 -->
+          <!-- 1cut 페이지 UI 완전히 제거 -->
+          <!-- main video for non-onecut (4cut) -->
+          <div class="video-wrap" style="position:relative;display:inline-block;">
+            <video id="video" autoplay playsinline style="display:block;max-width:92vw;max-height:72vh;border-radius:8px;transform:scaleX(-1)"></video>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;gap:0;">
+            <button id="startBtn" style="display:none">시작 (4장 연속 촬영)</button>
+            <div id="rolls" style="margin-top:14px;display:flex;gap:12px;flex-direction:row;justify-content:center;align-items:center;">
+              <img id="roll1" class="roll" alt="roll1" src="" style="display:none;"/>
+              <img id="roll2" class="roll" alt="roll2" src="" style="display:none;"/>
+              <img id="roll3" class="roll" alt="roll3" src="" style="display:none;"/>
+              <img id="roll4" class="roll" alt="roll4" src="" style="display:none;"/>
+            </div>
+          </div>
+          <canvas id="canvas" style="display:none"></canvas>
+        </div>
+      </div>
+      <!-- 1cut capture UI: identical to 4cut, new IDs -->
+      <div id="captureUI1cut" class="capture-center" style="position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;z-index:900;pointer-events:auto;padding:18px;">
+        <div class="capture-stack">
+          <div class="counter-row" style="width:100%;position:relative;display:flex;align-items:flex-end;justify-content:center;">
+            <div id="countdown1cut" style="position:absolute;left:50%;top:0;transform:translate(-50%,-85%);"></div>
+          </div>
+          <div class="video-wrap" style="position:relative;display:inline-block;">
+            <video id="video1cut" autoplay playsinline style="display:block;max-width:92vw;max-height:72vh;border-radius:8px;transform:scaleX(-1)"></video>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;gap:0;">
+            <button id="startBtn1cut" style="display:none">시작 (1장 촬영)</button>
+            <div id="rolls1cut" style="margin-top:14px;display:flex;gap:12px;flex-direction:row;justify-content:center;align-items:center;">
+              <img id="roll1_1cut" class="roll" alt="roll1_1cut" src="" style="display:none;"/>
+            </div>
+          </div>
+          <canvas id="canvas1cut" style="display:none"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+  <!-- shotCounter positioning logic is now handled in app.js -->
+  <script>
+    // captureUI 활성화 시
+    document.getElementById('captureUI').style.display = 'block';
+  </script>
+</body>
+</html>
