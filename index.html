@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="ko">
 <head>
   <meta charset="utf-8">
@@ -120,7 +120,7 @@
     <div class="center-col">
       <!-- Landing: centered title and mode buttons -->
       <div id="landing" style="position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;padding:18px;pointer-events:auto;z-index:999">
-        <img id="landingLogo" src="assets/logo.png" alt="lavv's photo studio logo" style="display:block;max-width:70%;height:auto">
+        <img id="landingLogo" src="assets/logo.png" alt="lavv's photo studio logo" style="display:none;max-width:70%;height:auto">
         <h1 id="landingText" style="margin:0;font-size:clamp(20px, 6vw, 56px);line-height:1.05">lavv's photo studio</h1>
         <div style="display:flex;gap:12px;margin-top:8px">
           <button id="btn4cut" style="padding:10px 14px">4cut</button>
@@ -133,8 +133,6 @@
           <div class="counter-row" style="width:100%;position:relative;display:flex;align-items:flex-end;justify-content:center;">
             <div id="countdown" style="position:absolute;left:50%;top:0;transform:translate(-50%,-85%);"></div>
           </div>
-          <!-- 1cut 전용 카메라 영역: 675x800px, 4cut과 동일한 구조/기능 -->
-          <!-- 1cut 페이지 UI 완전히 제거 -->
           <!-- main video for non-onecut (4cut) -->
           <div class="video-wrap" style="position:relative;display:inline-block;">
             <video id="video" autoplay playsinline style="display:block;max-width:92vw;max-height:72vh;border-radius:8px;transform:scaleX(-1)"></video>
@@ -151,32 +149,12 @@
           <canvas id="canvas" style="display:none"></canvas>
         </div>
       </div>
-      <!-- 1cut capture UI: identical to 4cut, new IDs -->
-      <div id="captureUI1cut" class="capture-center" style="position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;z-index:900;pointer-events:auto;padding:18px;">
-        <div class="capture-stack">
-          <div class="counter-row" style="width:100%;position:relative;display:flex;align-items:flex-end;justify-content:center;">
-            <div id="countdown1cut" style="position:absolute;left:50%;top:0;transform:translate(-50%,-85%);"></div>
-          </div>
-          <div class="video-wrap" style="position:relative;display:inline-block;">
-            <video id="video1cut" autoplay playsinline style="display:block;max-width:92vw;max-height:72vh;border-radius:8px;transform:scaleX(-1)"></video>
-          </div>
-          <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;gap:0;">
-            <button id="startBtn1cut" style="display:none">시작 (1장 촬영)</button>
-            <div id="rolls1cut" style="margin-top:14px;display:flex;gap:12px;flex-direction:row;justify-content:center;align-items:center;">
-              <img id="roll1_1cut" class="roll" alt="roll1_1cut" src="" style="display:none;"/>
-            </div>
-          </div>
-          <canvas id="canvas1cut" style="display:none"></canvas>
-        </div>
-      </div>
     </div>
   </div>
 
   <script src="app.js"></script>
-  <!-- shotCounter positioning logic is now handled in app.js -->
-  <script>
-    // captureUI 활성화 시
-    document.getElementById('captureUI').style.display = 'block';
-  </script>
 </body>
 </html>
+
+
+

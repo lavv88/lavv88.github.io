@@ -6,21 +6,15 @@
   const canvas = document.getElementById('canvas');
   const photo = document.getElementById('photo');
   const btn4cut = document.getElementById('btn4cut');
-  const btn1cut = document.getElementById('btn1cut');
   const landing = document.getElementById('landing');
   const captureUI = document.getElementById('captureUI');
   const landingLogo = document.getElementById('landingLogo');
   const landingText = document.getElementById('landingText');
-  const videoOne = document.getElementById('videoOne');
   const rollsEl = document.getElementById('rolls');
-  const onecutArea = document.getElementById('onecutArea');
-  const onecutBg = document.getElementById('onecutBg');
-  const onecutFrame = document.getElementById('onecutFrame');
-  let onecutHole = null; // {x,y,w,h} within onecutArea in CSS pixels
+  // onecut removed: keep 4cut only
 
   // initial UI state: hide videos and rolls on main
   if(video) video.style.display = 'none';
-  if(videoOne) videoOne.style.display = 'none';
   if(rollsEl) rollsEl.style.display = 'none';
 
   // if this page load is a reload, ensure we show the landing (main) UI
@@ -51,7 +45,7 @@
   }catch(e){/* ignore */}
 
   let stream;
-  let currentMode = null; // '4' or '1'
+  let currentMode = null; // set on 4cut entry
 
   async function ensureCamera(){
     if(stream) return;
@@ -59,7 +53,6 @@
       // request higher resolution when possible for better final output
       stream = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 } } });
       if(video) try{ video.srcObject = stream; await video.play(); }catch(e){}
-      if(videoOne) try{ videoOne.srcObject = stream; await videoOne.play(); }catch(e){}
     }catch(e){
       throw e;
     }
@@ -77,33 +70,59 @@
     if(captureUI) captureUI.style.display = 'none';
     if(rollsEl) rollsEl.style.display = 'none';
     if(video) video.style.display = 'none';
-    if(videoOne) videoOne.style.display = 'none';
-    if(onecutArea) onecutArea.style.display = 'none';
   }
 
   // capture a mirrored frame from the live video and return an Image
   function captureFrameMirrored(){
-    return new Promise((resolve)=>{
-      // force captured frames to fixed 640x480 regardless of camera resolution
-      const FIX_W = 640;
-      const FIX_H = 480;
-      const tmp = document.createElement('canvas');
-      tmp.width = FIX_W;
-      tmp.height = FIX_H;
-      const tctx = tmp.getContext('2d');
-      // draw mirrored and scale to fixed size
-      tctx.save();
-      tctx.translate(FIX_W, 0);
-      tctx.scale(-1, 1);
-      tctx.drawImage(video, 0, 0, video.videoWidth || FIX_W, video.videoHeight || FIX_H, 0, 0, FIX_W, FIX_H);
-      tctx.restore();
-      const img = new Image();
-      img.width = FIX_W;
-      img.height = FIX_H;
-      img.onload = ()=>resolve(img);
-      img.src = tmp.toDataURL('image/png');
-    });
-  }
+  return new Promise((resolve)=>{
+    const TARGET_W = 640;
+    const TARGET_H = 480;
+
+    const srcW = video.videoWidth;
+    const srcH = video.videoHeight;
+
+    // 원본 비율 유지한 채, 4:3 영역 계산
+    const targetRatio = TARGET_W / TARGET_H;
+    const srcRatio = srcW / srcH;
+
+    let cropW, cropH, cropX, cropY;
+
+    if (srcRatio > targetRatio) {
+      // 원본이 더 넓음 → 좌우 자르기
+      cropH = srcH;
+      cropW = srcH * targetRatio;
+      cropX = (srcW - cropW) / 2;
+      cropY = 0;
+    } else {
+      // 원본이 더 높음 → 위아래 자르기
+      cropW = srcW;
+      cropH = srcW / targetRatio;
+      cropX = 0;
+      cropY = (srcH - cropH) / 2;
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = TARGET_W;
+    canvas.height = TARGET_H;
+    const ctx = canvas.getContext('2d');
+
+    // 좌우 반전 + 크롭
+    ctx.save();
+    ctx.translate(TARGET_W, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(
+      video,
+      cropX, cropY, cropW, cropH,
+      0, 0, TARGET_W, TARGET_H
+    );
+    ctx.restore();
+
+    const img = new Image();
+    img.onload = ()=> resolve(img);
+    img.src = canvas.toDataURL('image/png');
+  });
+}
+
 
   // draw background 'cover' into given ctx at (0,0,w,h)
   function drawBgCoverInto(ctx, bg, w, h){
@@ -283,84 +302,6 @@
       alert('사진 저장에 실패했습니다. 콘솔을 확인하세요.');
     }
   }
-
-  // capture single frame and go to save page
-  async function captureOneAndGoToSave(){
-    try{ await ensureCamera(); }catch(e){ alert('카메라 권한을 허용해야 촬영할 수 있습니다. 콘솔을 확인하세요.'); console.error(e); return; }
-    // per-shot countdown before the single capture
-    await initialCountdown(3);
-    // shotCounter 관련 코드 제거
-
-    // If onecut mode, compose background + video area + frame into fixed 675x800 final image
-    if(currentMode === '1' && onecutArea){
-      const WIDTH = 675;
-      const HEIGHT = 800;
-      const SCALE = 2; // export at 2x for quality
-      const finalCanvas = document.createElement('canvas');
-      finalCanvas.width = WIDTH * SCALE;
-      finalCanvas.height = HEIGHT * SCALE;
-      const fctx = finalCanvas.getContext('2d');
-
-      // draw chosen background (onecutBg uses CSS background-image)
-      // extract URL from style
-      const bgStyle = onecutBg.style.backgroundImage || '';
-      const m = bgStyle.match(/url\("?(.*?)"?\)/);
-      if(m && m[1]){
-        const bgImg = new Image();
-        bgImg.src = m[1];
-        await new Promise(r=>{ bgImg.onload = r; bgImg.onerror = r; });
-        drawBgCoverInto(fctx, bgImg, finalCanvas.width, finalCanvas.height);
-      }else{
-        fctx.fillStyle = '#000';
-        fctx.fillRect(0,0,finalCanvas.width,finalCanvas.height);
-      }
-
-      // determine video area inside container (video fills onecutArea via CSS)
-      // we used hole detection to position video; capture the mirrored frame and draw to full area
-      const vid = (videoOne && currentMode === '1') ? videoOne : video;
-      const vW = (vid && vid.videoWidth) ? vid.videoWidth : (onecutArea.clientWidth || WIDTH);
-      const vH = (vid && vid.videoHeight) ? vid.videoHeight : (onecutArea.clientHeight || HEIGHT);
-      // create a fixed-size mirrored capture for the photo (force 640x480)
-      const FIX_W = 640;
-      const FIX_H = 480;
-      const tmp = document.createElement('canvas');
-      tmp.width = FIX_W;
-      tmp.height = FIX_H;
-      const tctx = tmp.getContext('2d');
-      tctx.save();
-      tctx.translate(FIX_W,0); tctx.scale(-1,1);
-      tctx.drawImage(vid,0,0, vid.videoWidth || FIX_W, vid.videoHeight || FIX_H, 0, 0, FIX_W, FIX_H);
-      tctx.restore();
-
-      // draw the video into the final canvas at the hole position if available
-      if(onecutHole && onecutArea){
-        const areaW = onecutArea.clientWidth || WIDTH;
-        const areaH = onecutArea.clientHeight || HEIGHT;
-        const destX = Math.round(onecutHole.x / areaW * finalCanvas.width);
-        const destY = Math.round(onecutHole.y / areaH * finalCanvas.height);
-        const destW = Math.round(onecutHole.w / areaW * finalCanvas.width);
-        const destH = Math.round(onecutHole.h / areaH * finalCanvas.height);
-        fctx.drawImage(tmp, 0, 0, tmp.width, tmp.height, destX, destY, destW, destH);
-      }else{
-        fctx.drawImage(tmp, 0, 0, tmp.width, tmp.height, 0, 0, finalCanvas.width, finalCanvas.height);
-      }
-
-      // 프레임 기능 완전히 제거 (draw frame image on top 삭제)
-
-      const dataUrl = finalCanvas.toDataURL('image/png');
-      const payload = { final: dataUrl, rolls: [dataUrl] };
-      sessionStorage.setItem('vibe_captures', JSON.stringify(payload));
-      window.location.href = 'save.html';
-      return;
-    }
-
-    // fallback: capture single video frame
-    const frame = await captureFrameMirrored();
-    const payload = { final: frame.src, rolls: [frame.src] };
-    sessionStorage.setItem('vibe_captures', JSON.stringify(payload));
-    window.location.href = 'save.html';
-  }
-
   // initial countdown before starting capture
   async function initialCountdown(seconds){
     let count = seconds;
@@ -381,34 +322,48 @@
     try{ await ensureCamera(); }catch(e){ alert('카메라 권한을 허용해야 촬영할 수 있습니다. 콘솔을 확인하세요.'); console.error(e); startBtn.disabled=false; return; }
 
     try{
-      if(currentMode === '4'){
         await captureFourAndCombine();
-      }else if(currentMode === '1'){
-        await captureOneAndGoToSave();
-      }
     }catch(e){ console.error('capture sequence failed', e); alert('촬영 중 오류가 발생했습니다. 콘솔을 확인하세요.'); }
     startBtn.disabled = false;
     // reset mode after
-    currentMode = null;
   });
 
   // wire landing buttons
   if(btn4cut){
     btn4cut.addEventListener('click', async ()=>{
       showCaptureUI();
-      if(onecutArea) onecutArea.style.display = 'none';
       if(rollsEl) rollsEl.style.display = 'flex';
       if(video) video.style.display = 'block';
-      if(videoOne) videoOne.style.display = 'none';
       currentMode = '4';
       startBtn.style.display = 'inline-block';
       startBtn.disabled = false;
       try{ await ensureCamera(); }catch(e){ alert('카메라 권한 필요'); return; }
     });
   }
-  if(btn1cut){
-    // 1cut 버튼 관련 코드 제거
-  }
+  function adjustCaptureUIScale(){
+  const ui = document.getElementById('captureUI');
+  if(!ui) return;
+
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+
+  // 기준 크기 (촬영 UI가 가장 잘 보이는 사이즈)
+  const BASE_W = 390; // 모바일 세로 기준
+  const BASE_H = 780;
+
+  const scale = Math.min(vw / BASE_W, vh / BASE_H, 1);
+
+  ui.style.transform = `scale(${scale})`;
+  ui.style.transformOrigin = 'center center';
+}
+
+// 최초 실행
+adjustCaptureUIScale();
+
+// 화면 회전 / 리사이즈 대응
+window.addEventListener('resize', adjustCaptureUIScale);
+window.addEventListener('orientationchange', adjustCaptureUIScale);
+
 
   // 1cut capture logic (identical to 4cut, but for 1 image)
 
